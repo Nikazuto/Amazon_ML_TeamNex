@@ -156,12 +156,12 @@ def generate_candidates(
         addr_token_index = _build_token_index(
             target_corpus.ids,
             lambda eid: target_corpus.addresses[eid].tokens,
-            min_len=3,
+            min_len=cfg.address_min_token_length,
             max_block_size=cfg.max_token_block_size,
         )
         for eid in s1_corpus.ids:
             for tok in s1_corpus.addresses[eid].tokens:
-                if len(tok) < 3 or tok in COMMON_TOKEN_STOPSET:
+                if len(tok) < cfg.address_min_token_length or tok in COMMON_TOKEN_STOPSET:
                     continue
                 candidates[eid].update(addr_token_index.get(tok, []))
 
@@ -204,13 +204,29 @@ def generate_candidates(
 
     # Safety valve: cap candidate volume per S1 entity if it explodes on a
     # pathologically common name. We keep the candidates whose normalized
-    # names are closest in length to the S1 name as a cheap, model-free tie
-    # breaker (an arbitrary but deterministic and stable ordering).
+    # names are closest in length to the S1 name as a cheap, model-free
+    # primary ranking key.
+    #
+    # BUGFIX (reproducibility): `cand` is a Python set, and CPython's string
+    # hashing is randomized per-process (PYTHONHASHSEED) unless pinned, so
+    # iterating a set of entity-id strings is NOT guaranteed to produce the
+    # same order across runs even with `seed_everything()` called (that only
+    # seeds `random`/`numpy`, not hash-based container ordering). Since
+    # `sorted()` is stable, ties on the length-diff key were previously
+    # broken by whatever order the set happened to iterate in that process
+    # -- i.e. which candidates survive the cap could silently change between
+    # runs on identical input/config, violating the "deterministic,
+    # reproducible" contract this module must uphold. We add the candidate
+    # id itself as a secondary sort key so ties are broken the same way on
+    # every run, on every machine, regardless of hash seed.
     for eid in s1_corpus.ids:
         cand = candidates[eid]
         if len(cand) > cfg.max_candidates_per_entity:
             s1_len = len(s1_corpus.names[eid].normalized)
-            ranked = sorted(cand, key=lambda cid: abs(len(target_corpus.names[cid].normalized) - s1_len))
+            ranked = sorted(
+                cand,
+                key=lambda cid: (abs(len(target_corpus.names[cid].normalized) - s1_len), cid),
+            )
             candidates[eid] = set(ranked[: cfg.max_candidates_per_entity])
 
     return candidates
