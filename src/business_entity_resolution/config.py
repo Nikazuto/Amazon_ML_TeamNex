@@ -74,6 +74,11 @@ class BlockingConfig:
     # D. address-based blocking
     enable_address_block: bool = True
     address_top_k: int = 15
+    # Minimum address-token length to be considered informative for address
+    # token-blocking (mirrors min_token_length for names). Previously
+    # hardcoded to 3 in blocking.py; exposed here per FR-8.3 so every run's
+    # config is fully reconstructible from PipelineConfig.
+    address_min_token_length: int = 3
     # E. combined name+address blocking is implicit in the union of the above
     # F. fuzzy retrieval via nearest neighbors on name+address combined n-grams
     enable_fuzzy_block: bool = True
