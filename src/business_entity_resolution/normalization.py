@@ -88,7 +88,12 @@ ADDRESS_ABBREVIATIONS = {
     "nr": "near",
 }
 
-STOPWORDS_ADDRESS = {"the", "of", "at", "near", "opposite", "behind", "beside", "next", "to"}
+# NOTE (fix): "near", "opposite", "behind", "beside", "next", "to" were
+# previously stripped as stopwords, which silently destroyed landmark
+# references ("Near SBI ATM" -> "SBI ATM"). That contradicts this module's
+# own design principle of preserving landmark-based address text. Only
+# genuine filler words are stripped now.
+STOPWORDS_ADDRESS = {"the", "of", "at"}
 
 PUNCT_RE = re.compile(r"[^\w\s&]", re.UNICODE)
 WHITESPACE_RE = re.compile(r"\s+")

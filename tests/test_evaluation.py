@@ -39,7 +39,11 @@ class TestF05Formula(unittest.TestCase):
         true_set = {"S2-001", "S2-002"}
         fp_case = f05_from_counts(true_set, {"S2-001", "S2-002", "S2-003"})  # 1 extra FP
         fn_case = f05_from_counts(true_set, {"S2-001"})  # 1 missing (FN)
-        self.assertLess(fn_case, fp_case)
+        # Fix: the false-positive case (precision 2/3, recall 1.0 -> F0.5 ~0.714)
+        # correctly scores LOWER than the false-negative case (precision 1.0,
+        # recall 0.5 -> F0.5 ~0.833) under F0.5's precision-heavy weighting.
+        # The original assertion had fp_case and fn_case reversed.
+        self.assertLess(fp_case, fn_case)
 
 
 class TestMacroF05(unittest.TestCase):
