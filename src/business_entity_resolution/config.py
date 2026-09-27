@@ -71,6 +71,12 @@ class BlockingConfig:
     enable_ngram_block: bool = True
     ngram_top_k: int = 15
     ngram_char_range: tuple = (2, 4)
+    # Scalability fix (2026-09-27): an n-gram feature shared by more than
+    # this many target rows is dropped as uninformative before candidate
+    # lookup, exactly as max_token_block_size does for word tokens. This is
+    # what bounds per-query cost at real (multi-million-row) scale; see
+    # blocking.py::_tfidf_topk_neighbors.
+    ngram_max_postings: int = 2000
     # D. address-based blocking
     enable_address_block: bool = True
     address_top_k: int = 15
@@ -84,6 +90,7 @@ class BlockingConfig:
     enable_fuzzy_block: bool = True
     fuzzy_top_k: int = 15
     fuzzy_char_range: tuple = (2, 4)
+    fuzzy_max_postings: int = 2000
     # Safety valve so a single S1 record with a very common name can't blow up
     # the candidate set / runtime.
     max_candidates_per_entity: int = 200
